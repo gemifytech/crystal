@@ -2,7 +2,7 @@
 💎 The Crystal Project is open source distribute api that works as a micro-service for platforms that allow users to link creative works. Crystal parses through creative works and stores them in a distributed database along with varying criteria to deem the source credible.
 
 ## About
-At Gemify, we needed a solution to ensure that information that ended up on our platform was reviewed by our community in a way that is dictated by our community in order to provide a democratic process that aims to avoid abuse. Unfortunately, we do not have the capital to moderate what goes through our platforms at our current state and we want to make the barrier as low as possible for others who wish to provide solutions to issues that currently plague in tech. Let it be clear that tech is inherently political, if you would like to learn more about where we stand politically check it out here: https://gemify.tech/politics
+At Gemify, we needed a solution to ensure that information that ended up on our platform was reviewed by our community in a way that is dictated by our community in order to provide a democratic process that aims to avoid abuse. Unfortunately, we do not have the capital to moderate what goes through our platforms at our current state and we want to make the barrier as low as possible for others who wish to provide solutions to issues that currently plague in tech. Let it be clear that tech is inherently political, if you would like to learn more about where we stand politically check it out here: https://gemify.tech/politics (not yet available)
 
 ## Issues
 While our intent is to democratize tech it might have significant reprecussions and negative impacts always supersede good intent. Here are some flaws and issues that we are aware of and how we aim to avoid something from going astray:
@@ -28,6 +28,6 @@ Platforms can then embed a modal with information provided with Crystal that con
 ## Example
 Headnovel, a social media site that allows users to post text and media to share with a users family and friends, has a misinformation problem and it has failed to corectly police content in a way that is both accurate and hastey over the past decade. Despite external pressures and empty promises it continues to fail in ways that convince its users that is accurate or democratic.
  
-In order to solve this, Headnovel sets up a Crystal node that is accessible from crystal.example.com. They then are able to automate a process that retreives information from this url when a user accesses a link shared by another user the feedback and credibility information. This information is synced with other nodes in order to gather feedback from other platforms as well.
+In order to solve this, Headnovel sets up a Crystal node that is accessible from crystal.gemify.com. They then are able to automate a process that retreives information from this url when a user accesses a link shared by another user the feedback and credibility information. This information is synced with other nodes in order to gather feedback from other platforms as well.
 
 If a user would like to provide feedback on a creative work, they can do so from whichever platform they are accessing.

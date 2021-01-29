@@ -1,8 +1,8 @@
-# Resarch
+# Research
 Research has been done to get us to where we are now and that reseach will continue to allow us to build something that continues to serve additional use cases. We are building Crystal to combat the spread of misinformation.
 
 # GEM Protocol
-Similar to other protocols like the OGP, we have designed a protocol to help satisfy the needs of...
+Similar to other protocols like the OGP, we have designed a protocol to help identify the accurate portrayal of information with ways of tracking what information came from where.
 
 # Meta Tags
 - gem:id - The UUID associated with the creative work published.
