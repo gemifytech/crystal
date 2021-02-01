@@ -28,7 +28,7 @@ class Blockchain:
         :hosting_node: The connected node (which runs the blockchain).
     """
 
-    def __init__(self, node_id):
+    def __init__(self, type, node_id):
         # Starting block
         genesis_block = Block(0, '', [], 100, 0)
         # Initializing our (empty) blockchain list
@@ -71,60 +71,6 @@ class Blockchain:
             return None
         return self.__chain[-1]
 
-    # This function accepts two arguments.
-    # One required one (transaction_amount) and one optional one (last_transaction)
-    # The optional one is optional because it has a default value => [1]
-
-    
-
-    def add_block(self, block):
-        transactions = [Transaction(
-            tx['sender'], tx['recipient'], tx['signature'], tx['amount']) for tx in block['transactions']]
-        proof_is_valid = Verification.valid_proof(
-            transactions[:-1], block['previous_hash'], block['proof'])
-        hashes_match = hash_block(self.chain[-1]) == block['previous_hash']
-        if not proof_is_valid or not hashes_match:
-            return False
-        converted_block = Block(
-            block['index'], block['previous_hash'], transactions, block['proof'], block['timestamp'])
-        self.__chain.append(converted_block)
-        stored_transactions = self.__open_transactions[:]
-        # The below is bad code
-        for itx in block['transactions']:
-            for opentx in stored_transactions:
-                if opentx.sender == itx['sender'] and opentx.recipient == itx['recipient'] and opentx.amount == itx['amount'] and opentx.signature == itx['signature']:
-                    try:
-                        self.__open_transactions.remove(opentx)
-                    except ValueError:
-                        print('Item was already removed')
-        self.save_data()
-        return True
-
-    def resolve(self):
-        winner_chain = self.chain
-        replace = False
-        for node in self.__peer_nodes:
-            url = 'http://{}/chain'.format(node)
-            try:
-                response = requests.get(url)
-                node_chain = response.json()
-                node_chain = [Block(block['index'], block['previous_hash'], [Transaction(
-                    tx['sender'], tx['recipient'], tx['signature'], tx['amount']) for tx in block['transactions']],
-                                    block['proof'], block['timestamp']) for block in node_chain]
-                node_chain_length = len(node_chain)
-                local_chain_length = len(winner_chain)
-                if node_chain_length > local_chain_length and Verification.verify_chain(node_chain):
-                    winner_chain = node_chain
-                    replace = True
-            except requests.exceptions.ConnectionError:
-                continue
-        self.resolve_conflicts = False
-        self.chain = winner_chain
-        if replace:
-            self.__open_transactions = []
-        self.save_data()
-        return replace
-
     def add_peer_node(self, node):
         """Adds a new node to the peer node set.
         Arguments:
@@ -147,8 +93,8 @@ class Blockchain:
 
 
 class TransactionBlockchain(Blockchain):
-    def __init__(self, )
-        super().__init__()
+    def __init__(self)
+        super().__init__('tx')
         self.load_data()
 
     def load_data(self):
@@ -204,6 +150,53 @@ class TransactionBlockchain(Blockchain):
         except IOError:
             print('Saving failed!')
 
+    def add_block(self, block):
+        transactions = [Transaction(
+            tx['sender'], tx['recipient'], tx['signature'], tx['amount']) for tx in block['transactions']]
+        proof_is_valid = Verification.valid_proof(
+            transactions[:-1], block['previous_hash'], block['proof'])
+        hashes_match = hash_block(self.chain[-1]) == block['previous_hash']
+        if not proof_is_valid or not hashes_match:
+            return False
+        converted_block = Block(
+            block['index'], block['previous_hash'], transactions, block['proof'], block['timestamp'])
+        self.__chain.append(converted_block)
+        stored_transactions = self.__open_transactions[:]
+        # The below is bad code
+        for itx in block['transactions']:
+            for opentx in stored_transactions:
+                if opentx.sender == itx['sender'] and opentx.recipient == itx['recipient'] and opentx.amount == itx['amount'] and opentx.signature == itx['signature']:
+                    try:
+                        self.__open_transactions.remove(opentx)
+                    except ValueError:
+                        print('Item was already removed')
+        self.save_data()
+        return True
+
+    def resolve(self):
+        winner_chain = self.chain
+        replace = False
+        for node in self.__peer_nodes:
+            url = 'http://{}/chain'.format(node)
+            try:
+                response = requests.get(url)
+                node_chain = response.json()
+                node_chain = [Block(block['index'], block['previous_hash'], [Transaction(
+                    tx['sender'], tx['recipient'], tx['signature'], tx['amount']) for tx in block['transactions']],
+                                    block['proof'], block['timestamp']) for block in node_chain]
+                node_chain_length = len(node_chain)
+                local_chain_length = len(winner_chain)
+                if node_chain_length > local_chain_length and Verification.verify_chain(node_chain):
+                    winner_chain = node_chain
+                    replace = True
+            except requests.exceptions.ConnectionError:
+                continue
+        self.resolve_conflicts = False
+        self.chain = winner_chain
+        if replace:
+            self.__open_transactions = []
+        self.save_data()
+        return replace
 
     def get_balance(self, sender=None):
         """Calculate and return the balance for a participant.
@@ -266,17 +259,17 @@ class TransactionBlockchain(Blockchain):
             return True
         return False
 
-class CitationBlock(Blockchain):
+class CitationBlockchain(Blockchain):
     def __init__(self, )
-        super().__init__()
+        super().__init__('ct')
 
 
-class CitationBlock(Blockchain):
+class FeedbackBlockchain(Blockchain):
     def __init__(self, )
-        super().__init__()
+        super().__init__('fb')
 
 
-class FakeBlock(Blockchain):
+class FakeBlockchain(Blockchain):
     def __init__(self, )
         super().__init__()
 
