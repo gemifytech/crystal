@@ -8,10 +8,9 @@ import binascii
 class Wallet:
     """Creates, loads and holds private and public keys. Manages transaction signing and verification."""
 
-    def __init__(self, node_id):
-        self.private_key = None
-        self.public_key = None
-        self.node_id = node_id
+    def __init__(self, public_key, private_key):
+        self.private_key = private_key
+        self.public_key = public_key
 
     def create_keys(self):
         """Create a new pair of private and public keys."""
@@ -23,7 +22,7 @@ class Wallet:
         """Saves the keys to a file (wallet.txt)."""
         if self.public_key != None and self.private_key != None:
             try:
-                with open('wallet-{}.txt'.format(self.public_key), mode='w') as f:
+                with open('wallet-{}.txt'.format('p'), mode='w+') as f:
                     f.write(self.public_key)
                     f.write('\n')
                     f.write(self.private_key)
@@ -63,6 +62,15 @@ class Wallet:
         h = SHA256.new((str(sender) + str(recipient) + str(amount)).encode('utf8'))
         signature = signer.sign(h)
         return binascii.hexlify(signature).decode('ascii')
+
+    @staticmethod
+    def verify_cube(cube, type):
+        if type == 'tx':
+            return Wallet.verify_transaction(cube)
+        if type == 'fb':
+            return Wallet.verify_feedback(cube)
+        if type == 'ct':
+            return Wallet.verify_citation(cube)
 
     @staticmethod
     def verify_transaction(transaction):

@@ -26,12 +26,12 @@ class Transaction(Cube):
 class Feedback(Cube):
 	"""The building block for activity within the TransactionChain
 	"""
-    def __init__(self, sender, platform, signature, package):
+	def __init__(self, sender, platform, signature, package):
 		super().__init__(sender, signature, 'fb')
-        self.platform = platform 
-        self.package = package
+		self.platform = platform 
+		self.package = package
 
-    def to_ordered_dict(self):
+	def to_ordered_dict(self):
 		# Might not need to include the platform that is included. Revise this.
 		return OrderedDict([('sender',self.sender),('platform',self.platform),('package',self.package)])
 
@@ -39,15 +39,15 @@ class Feedback(Cube):
 		return False
 
 
-class Citation(Cub):
+class Citation(Cube):
 	"""The building block for activity within the TransactionChain
 	"""
-    def __init__(self, sender, platform, signature, package):
+	def __init__(self, sender, platform, signature, package):
 		super().__init__(sender, signature, 'ct')
-        self.platform = platform
-        self.package = package
+		self.platform = platform
+		self.package = package
 
-    def to_ordered_dict(self):
+	def to_ordered_dict(self):
 		return OrderedDict([('sender',self.sender),('platform',self.platform),('package',self.package)])
 
 	def validate_package(self):

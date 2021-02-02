@@ -4,64 +4,13 @@ from flask_jwt_extended import (JWTManager, jwt_required, create_access_token, c
 from flask_restful import reqparse
 
 from wallet import Wallet
-from blockchain import Blockchain
-from security import authenticate, identity
-from user import User, UserLogin
-from utility.custom_flask import CustomFlask
+from blockchain import TransactionBlockchain, FeedbackBlockchain, CitationBlockchain
+from flask import Flask
 from config.config import Config
 
-app = CustomFlask(__name__)
-app.secret_key = Config.get('CRYSTAL_APP_KEY')
+app = Flask(__name__)
+app.secret_key = Config.SECRET_KEY
 CORS(app)
-
-
-jwt = JWTManager(app)
-
-# The following callbacks are used for customizing jwt response/error messages.
-# The original ones may not be in a very pretty format (opinionated)
-@jwt.expired_token_loader
-def expired_token_callback():
-    response = {
-        'description': 'The token has expired.',
-        'error': 'token_expired'
-    }
-    return jsonify(response), 401
-
-
-@jwt.invalid_token_loader
-def invalid_token_callback(error):  # we have to keep the argument here, since it's passed in by the caller internally
-    response = {
-        'description': 'Signature verification failed.',
-        'error': 'invalid_token'
-    }
-    return jsonify(response), 401
-
-
-@jwt.unauthorized_loader
-def missing_token_callback(error):
-    response = {
-        'description': 'Request does not contain an access token.',
-        'error': 'authorization_required'
-    }
-    return jsonify(response), 401
-
-
-@jwt.needs_fresh_token_loader
-def token_not_fresh_callback():
-    response = {
-        'description': 'The token is not fresh.',
-        'error': 'fresh_token_required'
-    }
-    return jsonify(response), 401
-
-
-@jwt.revoked_token_loader
-def revoked_token_callback():
-    response = {
-        'description': 'The token has been revoked.',
-        'error': 'token_revoked'
-    }
-    return jsonify(response), 401
 
 
 @app.route('/', methods=['GET'])
@@ -79,116 +28,18 @@ def get_node_ui():
     #return send_from_directory('ui', 'login.html')
 
 
-@app.route('/register', methods=['POST'])
-def register_user():
-    '''
-        Endpoint to create an account.
-
-        Crystal does not support this functionality as it relies on public key private key technology.
-    '''
-    if True:
-        reponse = {'error': 'This function is not available.'}
-        return jsonify(response), 400
-    values = request.get_json()
-    print(values)
-    if not values:
-        response = {
-            'message': 'No data found.'
-        }
-        return jsonify(response), 400
-    required_fields = ['username', 'password']
-    if not all(field in values for field in required_fields):
-        response = {
-            'message': 'Required data is missing.'
-        }
-        return jsonify(response), 400
-    username = values['username']
-    password = values['password']
-    user = User(0,username, password)
-    if user.post_user():
-        response = {
-            'message': 'User successfully created!'
-        }
-        return jsonify(response), 200
-    else:
-        response = {
-            'message': 'A user with that name already exists.'
-        }
-        return jsonify(response), 400
-
-
-@app.route('/login', methods=['POST'])
-def login_user():
-    '''
-        Endpoint to login.
-
-        Crystal does not support this functionality as it relies on public key private key technology.
-    '''
-    if True:
-        reponse = {'error': 'This function is not available.'}
-        return jsonify(response), 400
-    values = request.get_json()
-    if not values:
-        response = {
-            'message': 'No data found.'
-        }
-        return jsonify(response), 400
-    required_fields = ['username', 'password']
-    if not all(field in values for field in required_fields):
-        response = {
-            'message': 'Required data is missing.'
-        }
-        return jsonify(response), 400
-    username = values['username']
-    password = values['password']
-    user = UserLogin.validate_user(username, password)
-    if user:
-        access_token = create_access_token(identity=user.id, fresh=True)
-        refresh_token = create_refresh_token(user.id)
-        response = {
-            'message': 'Login successful.',
-            'access_token': access_token,
-            'refresh_token': refresh_token
-        }
-        return jsonify(response), 200
-    else:
-        response = {
-            'message': 'Username and password combination are not correct.'
-        }
-        return jsonify(response), 400
-
-
-@jwt_refresh_token_required
-@app.route('/refresh', methods=['POST'])
-def refresh():
-    '''
-        Endpoint to refresh token.
-
-        Crystal does not support this functionality as it relies on public key private key technology.
-    '''
-    if True:
-        reponse = {'error': 'This function is not available.'}
-        return jsonify(response), 400
-    current_user = get_jwt_identity()
-    new_token = create_access_token(identity=current_user, fresh=False)
-    response = {
-        'access_token': new_token
-    }
-    return jsonify(response), 200
-
-
 @app.route('/wallet', methods=['POST'])
 def create_keys():
     wallet = Wallet(1) # Get rid of node later
     wallet.create_keys()
     if wallet.save_keys():
-        global blockchain
-        blockchain = Blockchain(wallet.public_key, port)
+        global tx_chain
         response = {
             'public_key': wallet.public_key,
             'private_key': wallet.private_key,
-            'funds': blockchain.get_balance()
+            'funds': tx_chain.get_balance(wallet.public_key)
         }
+        print(response)
         return jsonify(response), 201
     else:
         response = {
@@ -197,35 +48,15 @@ def create_keys():
         return jsonify(response), 500
 
 
-@app.route('/wallet', methods=['GET'])
-def load_keys():
-    '''
-        Endpoint to get wallet information.
-
-        Crystal does not support this functionality as it relies on public key private key technology.
-    '''
-    if True:
-        reponse = {'error': 'This function is not available.'}
-        return jsonify(response), 400
-    if wallet.load_keys():
-        global blockchain
-        blockchain = Blockchain(wallet.public_key, port)
-        response = {
-            'public_key': wallet.public_key,
-            'private_key': wallet.private_key,
-            'funds': blockchain.get_balance()
-        }
-        return jsonify(response), 201
-    else:
-        response = {
-            'message': 'Loading the keys failed.'
-        }
-        return jsonify(response), 500
-
-
 @app.route('/transaction/balance', methods=['GET'])
 def get_balance():
-    balance = blockchain.get_balance()
+    """Checks the public keys balance.
+
+    Returns:
+        Response: 
+    """
+    sender = None
+    balance = blockchain.get_balance(sender=sender)
     if balance != None:
         response = {
             'message': 'Fetched balance successfully.',
@@ -240,7 +71,7 @@ def get_balance():
         return jsonify(response), 500
 
 
-@app.route('/broadcast-transaction', methods=['POST'])
+@app.route('/cube/broadcast-transaction', methods=['POST'])
 def broadcast_transaction():
     values = request.get_json()
     if not values:
@@ -270,7 +101,67 @@ def broadcast_transaction():
         return jsonify(response), 500
 
 
-@app.route('/broadcast-block', methods=['POST'])
+@app.route('/cube/broadcast-citation', methods=['POST'])
+def broadcast_transaction():
+    values = request.get_json()
+    if not values:
+        response = {'message': 'No data found.'}
+        return jsonify(response), 400
+    required = ['sender', 'platform', 'signature', 'payload']
+    if not all(key in values for key in required):
+        response = {'message': 'Some data is missing.'}
+        return jsonify(response), 400
+    success = blockchain.add_transaction(
+        values['sender'], values['platform'], values['signature'], values['payload'], is_receiving=True)
+    if success:
+        response = {
+            'message': 'Successfully added citation.',
+            'transaction': {
+                'sender': values['sender'],
+                'platform': values['platform'],
+                'signature': values['signature'],
+                'payload': values['payload']
+            }
+        }
+        return jsonify(response), 201
+    else:
+        response = {
+            'message': 'Creating a citation failed.'
+        }
+        return jsonify(response), 500
+
+
+@app.route('/cube/broadcast-feedback', methods=['POST'])
+def broadcast_transaction():
+    values = request.get_json()
+    if not values:
+        response = {'message': 'No data found.'}
+        return jsonify(response), 400
+    required = ['sender', 'platform', 'signature', 'payload']
+    if not all(key in values for key in required):
+        response = {'message': 'Some data is missing.'}
+        return jsonify(response), 400
+    success = blockchain.add_transaction(
+        values['sender'], values['platform'], values['signature'], values['payload'], is_receiving=True)
+    if success:
+        response = {
+            'message': 'Successfully added feedback.',
+            'transaction': {
+                'sender': values['sender'],
+                'platform': values['platform'],
+                'signature': values['signature'],
+                'payload': values['payload']
+            }
+        }
+        return jsonify(response), 201
+    else:
+        response = {
+            'message': 'Creating feedback failed.'
+        }
+        return jsonify(response), 500
+
+
+@app.route('/block/broadcast-transaction', methods=['POST'])
 def broadcast_block():
     values = request.get_json()
     if not values:
@@ -298,18 +189,13 @@ def broadcast_block():
 
 @app.route('/transaction', methods=['POST'])
 def add_transaction():
-    if wallet.public_key == None:
-        response = {
-            'message': 'No wallet set up.'
-        }
-        return jsonify(response), 400
     values = request.get_json()
     if not values:
         response = {
             'message': 'No data found.'
         }
         return jsonify(response), 400
-    required_fields = ['recipient', 'amount']
+    required_fields = ['public_key', 'private_key', 'recipient', 'payload']
     if not all(field in values for field in required_fields):
         response = {
             'message': 'Required data is missing.'
@@ -317,8 +203,9 @@ def add_transaction():
         return jsonify(response), 400
     recipient = values['recipient']
     amount = values['amount']
+    wallet = Wallet(values['public_key'], values['private_key'])
     signature = wallet.sign_transaction(wallet.public_key, recipient, amount)
-    success = blockchain.add_transaction(
+    success = tx_chain.add_transaction(
         wallet.public_key, recipient, signature, amount)
     if success:
         response = {
@@ -329,7 +216,7 @@ def add_transaction():
                 'amount': amount,
                 'signature': signature
             },
-            'funds': blockchain.get_balance()
+            'funds': tx_chain.get_balance()
         }
         return jsonify(response), 201
     else:
@@ -339,12 +226,93 @@ def add_transaction():
         return jsonify(response), 500
 
 
-@app.route('/mine', methods=['POST'])
+@app.route('/citation', methods=['POST'])
+def add_citation():
+    values = request.get_json()
+    if not values:
+        response = {
+            'message': 'No data found.'
+        }
+        return jsonify(response), 400
+    required_fields = ['public_key', 'private_key', 'recipient', 'payload']
+    if not all(field in values for field in required_fields):
+        response = {
+            'message': 'Required data is missing.'
+        }
+        return jsonify(response), 400
+    platform = values['platform']
+    payload = values['payload']
+    wallet = Wallet(values['public_key'], values['private_key'])
+    signature = wallet.sign_transaction(wallet.public_key, platform, payload)
+    success = ct_chain.add_transaction(
+        wallet.public_key, platform, signature, payload)
+    if success:
+        response = {
+            'message': 'Successfully added transaction.',
+            'transaction': {
+                'sender': wallet.public_key,
+                'platform': platform,
+                'payload': payload,
+                'signature': signature
+            },
+            'funds': ct_chain.get_balance()
+        }
+        return jsonify(response), 201
+    else:
+        response = {
+            'message': 'Creating a transaction failed.'
+        }
+        return jsonify(response), 500
+
+
+@app.route('/feedback', methods=['POST'])
+def add_feedback():
+    values = request.get_json()
+    if not values:
+        response = {
+            'message': 'No data found.'
+        }
+        return jsonify(response), 400
+    required_fields = ['public_key', 'private_key', 'recipient', 'payload']
+    if not all(field in values for field in required_fields):
+        response = {
+            'message': 'Required data is missing.'
+        }
+        return jsonify(response), 400
+    platform = values['platform']
+    payload = values['payload']
+    wallet = Wallet(values['public_key'], values['private_key'])
+    signature = wallet.sign_transaction(wallet.public_key, platform, payload)
+    success = fb_chain.add_transaction(
+        wallet.public_key, platform, signature, payload)
+    if success:
+        response = {
+            'message': 'Successfully added transaction.',
+            'transaction': {
+                'sender': wallet.public_key,
+                'platform': platform,
+                'payload': payload,
+                'signature': signature
+            },
+            'funds': fb_chain.get_balance()
+        }
+        return jsonify(response), 201
+    else:
+        response = {
+            'message': 'Creating a transaction failed.'
+        }
+        return jsonify(response), 500
+
+
+@app.route('/fake', methods=['POST'])
 def mine():
+    if True:
+        response = {'error': 'This endpoint is not available as Crystal does not supprt the mining of Blocks'}
+        return jsonify(response), 500
     if blockchain.resolve_conflicts == True:
         response = {'message': 'Resolve conflicts first. Block not added.'}
         return jsonify(response), 409
-    block = blockchain.mine_block()
+    block = blockchain.new_block()
     if block != None:
         dict_block = block.__dict__.copy()
         dict_block['transactions'] = [
@@ -442,5 +410,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', type=int, default=5000)
     args = parser.parse_args()
     port = args.port
-    blockchain = Blockchain(wallet.public_key, port)
+    tx_chain = TransactionBlockchain()
+    fb_chain = FeedbackBlockchain()
+    ct_chain = CitationBlockchain()
     app.run(host='0.0.0.0', port=port, debug=True)
